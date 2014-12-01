@@ -6,8 +6,6 @@
 
 # CONSTANTS
 file=".diary" # Hide file
-fileError=".diaryErrors" # Hide file
-fileHit=".diaryHits" # we'll write in this file when the search is sucessfull
 prompt="#!"
 
 # Colors Code
@@ -81,7 +79,7 @@ function search(){
 
 	if [ -f $file ]; then
 		colorText $Green "Search: ";  read search
-		cat $file | grep "\<$search:.*:.*" > diaryAux 2> $fileError
+		cat $file | grep "\<$search:.*:.*" > diaryAux 2> /dev/null
 
 		if [ $? -eq 0 ];then 
 			# If the grep command finished correctly, then show the data
@@ -103,11 +101,16 @@ function erase(){
 	if [ -f $file ]; then
 
 		colorText $Green "Name: ";  read name
-		let line=`cat $file | grep -n "\<$name:.*:.*" | cut -d ':' -f1`
-		if [ $? -eq 0 ]; then
+		line=`(grep -n "\<$name:.*:.*" $file | cut -d ':' -f1) 2> /dev/null` # We send the output error to the null device.
+		if [ -n "$line" ]; then
 			sed ${line}d $file > diaryAux
 			cat diaryAux > $file
 			rm diaryAux
+
+			if [ $(wc $file | cut -d " " -f1) = "0" ]; then
+				rm $file
+			fi
+			colorText $Cyan "Your diary has been updated, the state of your diary now is:\n"
 			show
 		else
 			colorText $Red "Sorry, this name isn't in your diary, try again.\n"
@@ -125,10 +128,8 @@ function eraseAll(){
 	if [ -f $file ]; then
 		rm $file
 	else
-		colorText $Red "There isn't nothing in the database, please add some contacts.\n"
+		colorText $Red "Your diary haven't got any contacts. Please, add someone.\n"
 	fi
-	touch $fileHit
-	touch $fileError
 }
 
 # 
@@ -141,7 +142,7 @@ function add(){
 	fi
 
 	colorText $Green "Name: ";  read name
-	cat $file | grep "\<$name:.*:.*" > $fileHit 
+	cat $file | grep "\<$name:.*:.*" > /dev/null 
 	if [ $? -ne 0 ];then
 		colorText $Green "Phone: "; read phone
 		colorText $Green "Mail: " ; read mail
